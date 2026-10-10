@@ -24,9 +24,9 @@ class TodoListTest {
     void addNormalizesWhitespace() {
         assertTrue(todoList.add("  buy milk  "));
 
-        List<String> tasks = todoList.getAll();
+        List<Task> tasks = todoList.getAll();
         assertEquals(1, tasks.size());
-        assertEquals("buy milk", tasks.get(0));
+        assertEquals("buy milk", tasks.get(0).getText());
     }
 
     @Test
@@ -34,7 +34,7 @@ class TodoListTest {
     void addKeepsInnerSpaces() {
         todoList.add("\t wash the  car \n");
 
-        assertEquals("wash the  car", todoList.getAll().get(0));
+        assertEquals("wash the  car", todoList.getAll().get(0).getText());
     }
 
     @Test
@@ -54,7 +54,7 @@ class TodoListTest {
         todoList.add("second");
 
         assertEquals(2, todoList.size());
-        assertEquals(List.of("first", "second"), todoList.getAll());
+        assertEquals(List.of("first", "second"), textsOf(todoList.getAll()));
     }
 
     @Test
@@ -66,7 +66,7 @@ class TodoListTest {
 
         assertTrue(todoList.remove(1));
         assertEquals(2, todoList.size());
-        assertEquals(List.of("first", "third"), todoList.getAll());
+        assertEquals(List.of("first", "third"), textsOf(todoList.getAll()));
     }
 
     @Test
@@ -79,7 +79,7 @@ class TodoListTest {
         assertFalse(todoList.remove(2));
         assertFalse(todoList.remove(100));
         assertEquals(2, todoList.size());
-        assertEquals(List.of("first", "second"), todoList.getAll());
+        assertEquals(List.of("first", "second"), textsOf(todoList.getAll()));
     }
 
     @Test
@@ -95,11 +95,11 @@ class TodoListTest {
     void getAllReturnsCopy() {
         todoList.add("first");
 
-        List<String> copy = todoList.getAll();
+        List<Task> copy = todoList.getAll();
         copy.clear();
 
         assertEquals(1, todoList.size());
-        assertEquals(List.of("first"), todoList.getAll());
+        assertEquals(List.of("first"), textsOf(todoList.getAll()));
     }
 
     @Test
@@ -109,6 +109,91 @@ class TodoListTest {
         todoList.add("beta");
         todoList.add("gamma");
 
-        assertEquals(List.of("alpha", "beta", "gamma"), todoList.getAll());
+        assertEquals(List.of("alpha", "beta", "gamma"), textsOf(todoList.getAll()));
+    }
+
+    @Test
+    @DisplayName("clear() removes all tasks")
+    void clearRemovesAllTasks() {
+        todoList.add("first");
+        todoList.add("second");
+
+        todoList.clear();
+
+        assertEquals(0, todoList.size());
+        assertTrue(todoList.getAll().isEmpty());
+    }
+
+    @Test
+    @DisplayName("clear() on an empty list is a no-op")
+    void clearOnEmptyList() {
+        todoList.clear();
+
+        assertEquals(0, todoList.size());
+    }
+
+    @Test
+    @DisplayName("markDone() marks only the requested task")
+    void markDoneMarksOnlyTargetTask() {
+        todoList.add("first");
+        todoList.add("second");
+        todoList.add("third");
+
+        assertTrue(todoList.markDone(1));
+
+        List<Task> tasks = todoList.getAll();
+        assertFalse(tasks.get(0).isDone());
+        assertTrue(tasks.get(1).isDone());
+        assertFalse(tasks.get(2).isDone());
+        assertEquals(3, todoList.size());
+    }
+
+    @Test
+    @DisplayName("markDone() returns false for an invalid index")
+    void markDoneInvalidIndex() {
+        todoList.add("first");
+
+        assertFalse(todoList.markDone(-1));
+        assertFalse(todoList.markDone(1));
+        assertFalse(todoList.markDone(100));
+        assertFalse(todoList.getAll().get(0).isDone());
+    }
+
+    @Test
+    @DisplayName("search() matches substrings ignoring character case")
+    void searchIsCaseInsensitive() {
+        todoList.add("Buy milk");
+        todoList.add("Write report");
+        todoList.add("buy bread");
+
+        List<Task> matches = todoList.search("MILK");
+        assertEquals(List.of("Buy milk"), textsOf(matches));
+
+        matches = todoList.search("buy");
+        assertEquals(List.of("Buy milk", "buy bread"), textsOf(matches));
+    }
+
+    @Test
+    @DisplayName("search() returns an empty list when nothing matches")
+    void searchNoResults() {
+        todoList.add("Buy milk");
+        todoList.add("Write report");
+
+        assertTrue(todoList.search("zzz").isEmpty());
+    }
+
+    @Test
+    @DisplayName("search() with a blank or null query matches nothing")
+    void searchWithBlankOrNullQuery() {
+        todoList.add("Buy milk");
+
+        assertTrue(todoList.search("").isEmpty());
+        assertTrue(todoList.search("   ").isEmpty());
+        assertTrue(todoList.search(null).isEmpty());
+        assertEquals(1, todoList.size());
+    }
+
+    private static List<String> textsOf(List<Task> tasks) {
+        return tasks.stream().map(Task::getText).toList();
     }
 }
